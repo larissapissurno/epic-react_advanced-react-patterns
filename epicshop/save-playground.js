@@ -10,10 +10,22 @@ import fsExtra from 'fs-extra'
 
 const playgroundAppName = await getPlaygroundAppName()
 const app = await getAppByName(playgroundAppName).catch(() => {})
-const solutionFolderName = app.dirName
+
+if (!app) {
+	console.error('❌  app not found')
+	throw new Error('app not found')
+}
+
+const [, moduleFolder, exerciseFolder] = app.relativePath.split('/')
+const playgroundFolderName = exerciseFolder.replace('problem', 'playground')
 
 const playgroundPath = path.join(process.cwd(), 'playground')
-const solutionPath = path.join(process.cwd(), 'solutions', solutionFolderName)
+const solutionPath = path.join(
+	process.cwd(),
+	'stored-playgrounds',
+	moduleFolder,
+	playgroundFolderName,
+)
 
 const doesPlaygroundExist = await fsExtra.exists(playgroundPath)
 
@@ -31,5 +43,5 @@ if (doesPlaygroundExist) {
 	// copy playground to solution
 	await fsExtra.copy(playgroundPath, solutionPath)
 
-	console.log('✅  playground copied to: ', solutionPath)
+	console.log('✅  playground saved on: ', solutionPath)
 }
