@@ -1,8 +1,5 @@
 import path from 'node:path'
 import {
-	getApps,
-	isProblemApp,
-	setPlayground,
 	getPlaygroundAppName,
 	getAppByName,
 } from '@epic-web/workshop-utils/apps.server'
