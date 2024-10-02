@@ -12,36 +12,42 @@ const playgroundAppName = await getPlaygroundAppName()
 const app = await getAppByName(playgroundAppName).catch(() => {})
 
 if (!app) {
-	console.error('❌  app not found')
-	throw new Error('app not found')
+	throw new Error('❌ app not found')
 }
 
-const [, moduleFolder, exerciseFolder] = app.relativePath.split('/')
-const playgroundFolderName = exerciseFolder.replace('problem', 'playground')
-
 const playgroundPath = path.join(process.cwd(), 'playground')
-const solutionPath = path.join(
+const doesPlaygroundExist = await fsExtra.exists(playgroundPath)
+if (!doesPlaygroundExist) {
+	throw new Error('❌  playground folder does not exist')
+}
+
+// create folder to store the playground
+const [, moduleFolder, exerciseFolder] = app.relativePath.split('/')
+const newFolderName = exerciseFolder.replace('problem', 'playground')
+const storedPlaygroundsPath = path.join(
 	process.cwd(),
 	'stored-playgrounds',
 	moduleFolder,
-	playgroundFolderName,
+	newFolderName,
+)
+await fsExtra.ensureDir(storedPlaygroundsPath).catch(error => {
+	console.error(error)
+	throw new Error('❌  ensureDir failed')
+})
+
+console.log(
+	'ℹ️  playground currently is set for exercise',
+	app.relativePath.replace('exercises/', ''),
+	`\n`,
 )
 
-const doesPlaygroundExist = await fsExtra.exists(playgroundPath)
+// copy playground to solution
+await fsExtra.copy(playgroundPath, storedPlaygroundsPath)
 
-if (!doesPlaygroundExist) {
-	console.error('❌  playground does not exist')
-	throw new Error('playground does not exist')
-}
+// update tsconfig path on tsconfig.json
+const tsconfigPath = path.join(storedPlaygroundsPath, 'tsconfig.json')
+const tsconfig = await fsExtra.readJson(tsconfigPath)
+tsconfig.extends = '../../../tsconfig.json'
+await fsExtra.writeJson(tsconfigPath, tsconfig, { spaces: 2 })
 
-if (doesPlaygroundExist) {
-	// create folder for solution
-	await fsExtra.ensureDir(solutionPath).catch(error => {
-		console.error(error)
-		throw new Error('❌  ensureDir failed')
-	})
-	// copy playground to solution
-	await fsExtra.copy(playgroundPath, solutionPath)
-
-	console.log('✅  playground saved on: ', solutionPath)
-}
+console.log('✅ playground saved on:', storedPlaygroundsPath)
